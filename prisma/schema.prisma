@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPTICIEN
+  EMPLOYE
+}
+
+enum ProductType {
+  MONTURE
+  VERRE
+  ACCESSOIRE
+}
+
+enum OrderStatus {
+  EN_COURS
+  PRETE
+  LIVREE
+  ANNULEE
+}
+
+enum PaymentMethod {
+  ESPECE
+  CARTE
+  CHEQUE
+  VIREMENT
+}
+
+enum InsuranceProvider {
+  AMO
+  CNSS
+  CNOPS
+  MUTUELLE
+}
+
+enum InsuranceStatus {
+  EN_ATTENTE
+  DEPOSE
+  REMBOURSE
+  REFUSE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  password  String
+  role      Role     @default(EMPLOYE)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Client {
+  id             Int             @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  phone          String?
+  email          String?
+  gender         String?
+  birthDate      DateTime?
+  address        String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  prescriptions  Prescription[]
+  orders         Order[]
+  insuranceFiles InsuranceFile[]
+}
+
+model Prescription {
+  id          Int      @id @default(autoincrement())
+  clientId    Int
+  date        DateTime
+  doctor      String?
+  odSphere    Float?
+  odCylinder  Float?
+  odAxis      Float?
+  odAddition  Float?
+  ogSphere    Float?
+  ogCylinder  Float?
+  ogAxis      Float?
+  ogAddition  Float?
+  pd          Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Supplier {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
+
+model Product {
+  id            Int         @id @default(autoincrement())
+  type          ProductType
+  name          String
+  brand         String?
+  description   String?
+  costPrice     Float
+  sellPrice     Float
+  stockQuantity Int         @default(0)
+  minStock      Int         @default(5)
+  supplierId    Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  supplier      Supplier?   @relation(fields: [supplierId], references: [id])
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id             Int             @id @default(autoincrement())
+  reference      String          @unique
+  clientId       Int
+  status         OrderStatus     @default(EN_COURS)
+  totalAmount    Float           @default(0)
+  paidAmount     Float           @default(0)
+  notes          String?
+  deliveryAt     DateTime?
+  createdById    Int?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  client         Client          @relation(fields: [clientId], references: [id])
+  createdBy      User?           @relation(fields: [createdById], references: [id])
+  items          OrderItem[]
+  payments       Payment[]
+  insuranceFiles InsuranceFile[]
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int?
+  label     String
+  quantity  Int
+  unitPrice Float
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product? @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id      Int           @id @default(autoincrement())
+  orderId Int
+  amount  Float
+  method  PaymentMethod
+  paidAt  DateTime      @default(now())
+  order   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model InsuranceFile {
+  id               Int               @id @default(autoincrement())
+  clientId         Int
+  orderId          Int?
+  provider         InsuranceProvider
+  status           InsuranceStatus   @default(EN_ATTENTE)
+  reference        String?
+  claimedAmount    Float?
+  reimbursedAmount Float?
+  submittedAt      DateTime?
+  reimbursedAt     DateTime?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  client           Client            @relation(fields: [clientId], references: [id])
+  order            Order?            @relation(fields: [orderId], references: [id])
+}
